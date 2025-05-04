@@ -10,7 +10,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FlexaScope(builder: (context) => MaterialApp(title: 'Flexa Example', theme: ThemeData(primarySwatch: Colors.blue), home: const FlexaExample()));
+    return FlexaScope(
+      builder: (context) => MaterialApp(
+        title: 'Flexa Example',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        home: const FlexaExample(),
+      ),
+    );
   }
 }
 
@@ -21,13 +27,12 @@ class FlexaExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Flexa Responsive Demo')),
-      body: Responsive(
-        // Define layouts for different screen sizes
-        phone: (context) => const PhoneLayout(),
-        tablet: (context) => const TabletLayout(),
-        large: (context) => const LargeLayout(),
-        extraLarge: (context) => const ExtraLargeLayout(),
-        extraExtraLarge: (context) => const ExtraExtraLargeLayout(),
+      body: Flexa.when(
+        phone: () => const PhoneLayout(),
+        tablet: () => const TabletLayout(),
+        large: () => const LargeLayout(),
+        xLarge: () => const ExtraLargeLayout(),
+        xxLarge: () => const ExtraExtraLargeLayout(),
       ),
     );
   }
@@ -49,14 +54,20 @@ class PhoneLayout extends StatelessWidget {
           ),
           20.verticalSpace, // Scaled vertical spacing
           Container(
-            width: 50.w, // 50% of screen width
-            height: 20.h, // 20% of screen height
+            width: 100.adaptive,
+            height: 100.adaptive,
             color: Colors.blue,
-            child: const Center(child: Text('Scaled Box')),
+            child: const Center(child: Text('Adaptive Box')),
           ),
           10.verticalSpace,
-          Text('Screen Width: ${Flexa.screenWidth.toStringAsFixed(1)}', style: TextStyle(fontSize: 16.font)),
-          Text('Screen Height: ${Flexa.screenHeight.toStringAsFixed(1)}', style: TextStyle(fontSize: 16.font)),
+          Text(
+            'Screen Width: ${Flexa.screenWidth.toStringAsFixed(1)}',
+            style: TextStyle(fontSize: 16.font),
+          ),
+          Text(
+            'Screen Height: ${Flexa.screenHeight.toStringAsFixed(1)}',
+            style: TextStyle(fontSize: 16.font),
+          ),
         ],
       ),
     );
@@ -75,7 +86,12 @@ class TabletLayout extends StatelessWidget {
         children: [
           Text('Tablet Layout', style: TextStyle(fontSize: 24.font)),
           20.horizontalSpace, // Scaled horizontal spacing
-          Container(width: 40.w, height: 30.h, color: Colors.green, child: const Center(child: Text('Scaled Box'))),
+          Container(
+            width: 40.w,
+            height: 30.h,
+            color: Colors.green,
+            child: const Center(child: Text('Scaled Box')),
+          ),
         ],
       ),
     );
@@ -97,9 +113,19 @@ class LargeLayout extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(width: 30.w, height: 20.h, color: Colors.orange, child: const Center(child: Text('Box 1'))),
+              Container(
+                width: 30.w,
+                height: 20.h,
+                color: Colors.orange,
+                child: const Center(child: Text('Box 1')),
+              ),
               10.horizontalSpace,
-              Container(width: 30.w, height: 20.h, color: Colors.red, child: const Center(child: Text('Box 2'))),
+              Container(
+                width: 30.w,
+                height: 20.h,
+                color: Colors.red,
+                child: const Center(child: Text('Box 2')),
+              ),
             ],
           ),
         ],
@@ -120,7 +146,12 @@ class ExtraLargeLayout extends StatelessWidget {
         children: [
           Text('Extra Large Layout', style: TextStyle(fontSize: 32.font)),
           40.verticalSpace,
-          Container(width: 60.w, height: 40.h, color: Colors.purple, child: const Center(child: Text('Big Scaled Box'))),
+          Container(
+            width: 60.w,
+            height: 40.h,
+            color: Colors.purple,
+            child: const Center(child: Text('Big Scaled Box')),
+          ),
         ],
       ),
     );
@@ -142,11 +173,26 @@ class ExtraExtraLargeLayout extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(width: 25.w, height: 25.h, color: Colors.teal, child: const Center(child: Text('Box 1'))),
+              Container(
+                width: 25.w,
+                height: 25.h,
+                color: Colors.teal,
+                child: const Center(child: Text('Box 1')),
+              ),
               20.horizontalSpace,
-              Container(width: 25.w, height: 25.h, color: Colors.cyan, child: const Center(child: Text('Box 2'))),
+              Container(
+                width: 25.w,
+                height: 25.h,
+                color: Colors.cyan,
+                child: const Center(child: Text('Box 2')),
+              ),
               20.horizontalSpace,
-              Container(width: 25.w, height: 25.h, color: Colors.indigo, child: const Center(child: Text('Box 3'))),
+              Container(
+                width: 25.w,
+                height: 25.h,
+                color: Colors.indigo,
+                child: const Center(child: Text('Box 3')),
+              ),
             ],
           ),
         ],

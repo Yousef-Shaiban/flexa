@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// handling scaling based on screen size, PPI, and orientation
 class Flexa {
   /// Singleton factory constructor ensuring only one instance exists
-  factory Flexa() => _instance ??= Flexa._();
+  factory Flexa() => instance;
 
   /// Private constructor for singleton pattern
   Flexa._();
@@ -16,8 +16,14 @@ class Flexa {
   static const double _designPpi = 160.0;
 
   /// Default base sizes for phone and tablet in logical pixels
-  static const Size _defaultPhoneSize = Size(360, 640);
-  static const Size _defaultTabletSize = Size(600, 960);
+  static const Size _defaultPhoneSize = Size(360, 640); // Small phone
+  static const Size _defaultTabletSize = Size(600, 960); // Small tablet
+  static const Size _defaultLargeSize = Size(1024, 768); // Large tablet or small desktop
+  static const Size _defaultXLargeSize = Size(1280, 800); // Medium desktop
+  static const Size _defaultXXLargeSize = Size(
+    1920,
+    1080,
+  ); // Large desktop or high-resolution display
 
   /// Base design size used for scaling calculations
   late Size _baseSize;
@@ -38,16 +44,54 @@ class Flexa {
   final double _adaptiveFactor = 0.5;
 
   /// Public accessor for the singleton instance
-  static Flexa get instance => _instance ??= Flexa._();
+  static Flexa get instance {
+    if (_instance == null) {
+      throw Exception('Flexa error ensure to wrap your app widget with FlexaScope() widget');
+    }
+    return _instance!;
+  }
+
+  /// Convenience getter for system font scale
+  static bool get systemFontScale => instance._systemFontScale;
 
   /// Convenience getter for screen height
-  static double get screenHeight => _instance?._screenSize.height ?? 0;
+  static double get screenHeight => instance._screenSize.height;
 
   /// Convenience getter for screen width
-  static double get screenWidth => _instance?._screenSize.width ?? 0;
+  static double get screenWidth => instance._screenSize.width;
 
-  /// Determines if the device is a tablet based on width >= 600
-  static bool get isTablet => (_instance?._screenSize.width ?? 0) >= 600;
+  /// Determines if the device width >= 360 & width < 600
+  static bool get isPhone => screenWidth >= 360 && screenWidth < 600;
+
+  /// Determines if the device width >= 360
+  static bool get isPhoneOrLarger => screenWidth >= 360;
+
+  /// Determines if the device width >= 600 & width < 1024
+  static bool get isTablet => screenWidth >= 600 && screenWidth < 1024;
+
+  /// Determines if the device width >= 600
+  static bool get isTabletOrLarger => screenWidth >= 600;
+
+  /// Determines if the device width >= 1024 & width < 1280
+  static bool get isLarge => screenWidth >= 1024 && screenWidth < 1280;
+
+  /// Determines if the device width >= 1024
+  static bool get isLargeOrLarger => screenWidth >= 1024;
+
+  /// Determines if the device width >= 1280 & width < 1920
+  static bool get isxLarge => screenWidth >= 1280 && screenWidth < 1920;
+
+  /// Determines if the device width >= 1280
+  static bool get isxLargeOrLarger => screenWidth >= 1280;
+
+  /// Determines if the device width >= 1920
+  static bool get isxxLargeOrLarger => screenWidth >= 1920;
+
+  /// Determines if the device height >= width
+  static bool get isScreenDimensionsPortrait => screenWidth <= screenHeight;
+
+  /// Determines if the device width > height
+  static bool get isScreenDimensionsLandscape => screenWidth > screenHeight;
 
   /// Initializes Flexa with context, optional system font scaling, and base size
   static void init(BuildContext context, {bool? systemFontScale, Size? baseSize}) {
@@ -61,19 +105,21 @@ class Flexa {
     _instance!._screenSize = Size(constraints.width, constraints.height);
 
     /// Set base size, defaulting to phone or tablet based on screen width
-    _instance!._baseSize = baseSize ?? (isTablet ? _defaultTabletSize : _defaultPhoneSize);
+    _instance!._baseSize =
+        baseSize ??
+        Flexa.when(
+          phone: () => _defaultPhoneSize,
+          tablet: () => _defaultTabletSize,
+          large: () => _defaultLargeSize,
+          xLarge: () => _defaultXLargeSize,
+          xxLarge: () => _defaultXXLargeSize,
+        );
 
     /// Adjust base size for orientation
-    if (_instance!._screenSize.width > _instance!._screenSize.height) {
-      /// Landscape: swap base size if designed for portrait
-      if (_instance!._baseSize.width < _instance!._baseSize.height) {
-        _instance!._baseSize = Size(_instance!._baseSize.height, _instance!._baseSize.width);
-      }
+    if (screenWidth > screenHeight) {
+      _instance!._baseSize = Size(_instance!._baseSize.height, _instance!._baseSize.width);
     } else {
-      /// Portrait: ensure base size is in portrait
-      if (_instance!._baseSize.width > _instance!._baseSize.height) {
-        _instance!._baseSize = Size(_instance!._baseSize.height, _instance!._baseSize.width);
-      }
+      _instance!._baseSize = Size(_instance!._baseSize.width, _instance!._baseSize.height);
     }
 
     /// Set font scaling preferences
@@ -82,16 +128,107 @@ class Flexa {
     _instance!._ppi = devicePixelRatio * _designPpi;
   }
 
+  /// A function for responsive layouts based on screen width breakpoints.
+  ///
+  /// Usage:
+  /// ```dart
+  /// Flexa.when(
+  ///   phone: () => Text('Phone Layout'),
+  ///   tablet: () => Text('Tablet Layout'),
+  ///   large: () => Text('Large Layout'),
+  ///   xLarge: () => Text('xLarge Layout'),
+  ///   xxLarge: () => Text('xxLarge Layout'),
+  /// );
+  /// ```
+  ///
+  /// - The function returns the value corresponding to the smallest matching breakpoint.
+  /// - If no breakpoint matches, it falls back to the smallest provided breakpoint.
+  /// - At least one size-specific value must be provided.
+  static T when<T>({
+    T Function()? phone,
+    T Function()? tablet,
+    T Function()? large,
+    T Function()? xLarge,
+    T Function()? xxLarge,
+  }) {
+    final List<Map<String, dynamic>> breakpoints = [
+      {'minWidth': 1920.0, 'value': xxLarge},
+      {'minWidth': 1280.0, 'value': xLarge},
+      {'minWidth': 960.0, 'value': large},
+      {'minWidth': 600.0, 'value': tablet},
+      {'minWidth': 0.0, 'value': phone},
+    ];
+    final providedValues = [phone, tablet, large, xLarge, xxLarge].where((i) => i != null);
+    if (providedValues.isEmpty) {
+      throw Exception(
+        '(Flexa) At least one size-specific value must be provided using (.when()) expression.',
+      );
+    }
+
+    for (final breakpoint in breakpoints) {
+      if (screenWidth >= breakpoint['minWidth'] && breakpoint['value'] != null) {
+        return breakpoint['value']!.call();
+      }
+    }
+
+    return phone?.call() ?? tablet?.call() ?? large?.call() ?? xLarge?.call() ?? xxLarge!.call();
+  }
+
+  /// Scales a height value based on the ratio of screen height to base height,
+  /// clamping the scale between 0.5x and 3x
+  double heightScale(double size) {
+    final scale = _screenSize.height / _baseSize.height;
+    return size * scale.clamp(0.5, 3.0);
+  }
+
+  /// Scales a height value intelligently based on the device's screen height,
+  /// using dynamic reference widths determined by device category breakpoints.
+  ///
+  /// This method calculates a scaling factor by comparing the current screen height
+  /// to a reference height, which is selected based on predefined device categories
+  /// The scaling factor is then clamped between a minimum and maximum value
+  /// to ensure reasonable bounds. This approach aims to provide responsive height scaling
+  /// tailored to different device sizes.
+  double smartHeightScale(double size, {double minClamp = 0.5, double maxClamp = 3.0}) {
+    final referenceHeight = Flexa.when(
+      large: () => _defaultPhoneSize.height, // 360 for screens >= 960px
+      xLarge: () => _defaultTabletSize.height, // 600 for screens >= 1280px
+      xxLarge: () => _defaultLargeSize.height, // 1024 for screens >= 1920px
+    );
+    final scaleFactor = _screenSize.height / referenceHeight;
+    final clampedScale = scaleFactor.clamp(minClamp, maxClamp); // Clamp between 0.5 and 3.0
+    return size * clampedScale;
+  }
+
   /// Scales a width value based on the ratio of screen width to base width,
   /// clamping the scale between 0.5x and 3x
-  double _widthScale(double size) {
+  double widthScale(double size) {
     final scale = _screenSize.width / _baseSize.width;
     return size * scale.clamp(0.5, 3.0);
   }
 
+  /// Scales a width value intelligently based on the device's screen width,
+  /// using dynamic reference widths determined by device category breakpoints.
+  ///
+  /// This method calculates a scaling factor by comparing the current screen width
+  /// to a reference width, which is selected based on predefined device categories
+  /// The scaling factor is then clamped between a minimum and maximum value
+  /// to ensure reasonable bounds. This approach aims to provide responsive width scaling
+  /// tailored to different device sizes.
+  double smartWidthScale(double size, {double minClamp = 0.5, double maxClamp = 3.0}) {
+    final referenceWidth = Flexa.when(
+      large: () => _defaultPhoneSize.width, // 360 for screens >= 960px
+      xLarge: () => _defaultTabletSize.width, // 600 for screens >= 1280px
+      xxLarge: () => _defaultLargeSize.width, // 1024 for screens >= 1920px
+    );
+    final scaleFactor = _screenSize.width / referenceWidth;
+    final clampedScale = scaleFactor.clamp(minClamp, maxClamp); // Clamp between 0.5 and 3.0
+    return size * clampedScale;
+  }
+
   /// Provides balanced scaling by interpolating between original size and width-scaled size
   double adaptiveScale(double size) {
-    final widthScaled = _widthScale(size);
+    final widthScaled = smartWidthScale(size);
     return size + (widthScaled - size) * _adaptiveFactor;
   }
 
@@ -154,62 +291,46 @@ class _FlexaScopeState extends State<FlexaScope> {
   }
 }
 
-/// A StatelessWidget for responsive layouts based on screen width breakpoints
-class Responsive extends StatelessWidget {
-  /// Widget builder for phone screens (width < 600)
-  final Widget Function(BuildContext context)? phone;
-
-  /// Widget builder for tablet screens (600 ≤ width < 960)
-  final Widget Function(BuildContext context)? tablet;
-
-  /// Widget builder for large screens (960 ≤ width < 1280)
-  final Widget Function(BuildContext context)? large;
-
-  /// Widget builder for extra-large screens (1280 ≤ width < 1920)
-  final Widget Function(BuildContext context)? extraLarge;
-
-  /// Widget builder for extra-extra-large screens (width ≥ 1920)
-  final Widget Function(BuildContext context)? extraExtraLarge;
-
-  /// Constructor with optional builders for different screen sizes
-  Responsive({super.key, this.phone, this.tablet, this.large, this.extraLarge, this.extraExtraLarge}) {
-    /// Assert that at least two size-specific widgets are provided
-    final providedWidgets = [phone, tablet, large, extraLarge, extraExtraLarge].where((widget) => widget != null).length;
-    assert(providedWidgets >= 2, 'At least two size-specific widgets must be provided.');
-  }
-
-  /// Builds the appropriate widget based on screen width
-  @override
-  Widget build(BuildContext context) {
-    final double width = Flexa.screenWidth;
-
-    /// List of breakpoints and their corresponding widget builders
-    final List<Map<String, dynamic>> breakpoints = [
-      {'minWidth': 1920.0, 'widget': extraExtraLarge},
-      {'minWidth': 1280.0, 'widget': extraLarge},
-      {'minWidth': 960.0, 'widget': large},
-      {'minWidth': 600.0, 'widget': tablet},
-      {'minWidth': 0.0, 'widget': phone},
-    ];
-
-    /// Select and build the widget for the current screen width
-    for (final breakpoint in breakpoints) {
-      if (width >= breakpoint['minWidth'] && breakpoint['widget'] != null) {
-        return breakpoint['widget'].call(context);
-      }
-    }
-
-    /// Fallback to an empty widget if no match is found
-    return const SizedBox.shrink();
-  }
-}
-
 /// Extension on num to provide convenient access to Flexa scaling methods
 extension FlexaUnits on num {
-  /// Adaptive scaling of the number
+  /// Scales a width value proportionally based on the current screen width relative to the base width.
+  /// The scaling ratio is clamped between 0.5x and 3x to ensure reasonable bounds.
+  ///
+  /// Base widths for different device categories:
+  /// - Phone: 360 (e.g., using `360.ws` on a phone will take the full width)
+  /// - Tablet: 600 (e.g., using `600.ws` on a tablet will take the full width)
+  /// - Large: 960 (e.g., using `960.ws` on a large device will take the full width)
+  /// - xLarge: 1280 (e.g., using `1280.ws` on an xLarge device will take the full width)
+  /// - xxLarge: 1920 (e.g., using `1920.ws` on an xxLarge device will take the full width)
+  ///
+  /// Usage: Use this getter to dynamically adjust width values for responsive layouts.
+  /// Example: `360.ws` will take the full width on a phone, `600.ws` on a tablet, etc.
+  double get ws => Flexa.instance.widthScale(toDouble());
+
+  /// Scales a width value intelligently based on the device's screen width,
+  double get wss => Flexa.instance.smartWidthScale(toDouble());
+
+  /// Scales a height value proportionally based on the current screen height relative to the base height.
+  /// The scaling ratio is clamped between 0.5x and 3x to ensure reasonable bounds.
+  ///
+  /// Base heights for different device categories:
+  /// - Phone: 640 (e.g., using `640.hs` on a phone will take the full height)
+  /// - Tablet: 960 (e.g., using `960.hs` on a tablet will take the full height)
+  /// - Large: 768 (e.g., using `768.hs` on a large device will take the full height)
+  /// - xLarge: 800 (e.g., using `800.hs` on an xLarge device will take the full height)
+  /// - xxLarge: 1080 (e.g., using `1080.hs` on an xxLarge device will take the full height)
+  ///
+  /// Usage: Use this getter to dynamically adjust height values for responsive layouts.
+  /// Example: `640.hs` will take the full height on a phone, `960.hs` on a tablet, etc.
+  double get hs => Flexa.instance.heightScale(toDouble());
+
+  /// Scales a width value intelligently based on the device's screen height,
+  double get hss => Flexa.instance.smartHeightScale(toDouble());
+
+  /// Adaptive scaling
   double get adaptive => Flexa.instance.adaptiveScale(toDouble());
 
-  /// Font scaling of the number
+  /// Font scaling
   double get font => Flexa.instance.fontScale(toDouble());
 
   /// Width percentage of the screen
@@ -238,4 +359,24 @@ extension FlexaUnits on num {
 
   /// Square spacer with adaptive width and height
   SizedBox get box => SizedBox(width: adaptive, height: adaptive);
+
+  /// Returns a widget that calculates width based on its parent
+  Widget pw(BuildContext context, Widget Function(double width) builder) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double value = constraints.maxWidth * (this / 100);
+        return builder(value);
+      },
+    );
+  }
+
+  /// Returns a widget that calculates height based on its parent
+  Widget ph(BuildContext context, Widget Function(double height) builder) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double value = constraints.maxHeight * (this / 100);
+        return builder(value);
+      },
+    );
+  }
 }

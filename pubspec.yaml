@@ -1,6 +1,6 @@
 name: flexa
 description: "Flexa is a robust utility for handling responsive UI scaling in Flutter applications"
-version: 0.0.9
+version: 0.1.5
 homepage: https://github.com/Yousef-Shaiban/flexa
 
 environment:
